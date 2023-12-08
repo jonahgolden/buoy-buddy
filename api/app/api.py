@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .buoy import Buoy
-from . import buoys
+from starlette.responses import RedirectResponse
+from . import buoys, php
 
 # class ORJSONResponse(JSONResponse):
 #     media_type = "application/json"
@@ -25,14 +25,10 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+@app.get("/")
+def main():
+    return RedirectResponse(url="/docs/")
 
-@app.get("/", tags=["root"])
-async def read_root() -> dict:
-    return {"message": "Welcome to Buoy Buddy."}
-
-# @app.get("/buoys/")
-# async def get_buoys():
-#     return Buoy.get_buoys()
 
 app.include_router(
     buoys.router,
@@ -40,4 +36,10 @@ app.include_router(
     tags=["buoys"],
     # dependencies=[Depends(get_token_header)],
     # responses={404: {"description": "Not found"}},
+)
+
+app.include_router(
+    php.router,
+    prefix="/stations",
+    tags=["stations"],
 )

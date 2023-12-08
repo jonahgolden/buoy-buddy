@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-import logging as logger
+# import logging as logger
 import pandas as pd
 import re
 from .buoy import Buoy
@@ -17,18 +17,13 @@ async def get_buoys():
     buoys.drop(['location', 'hull', 'payload', 'forecast', 'note'], axis=1, inplace=True)
     return buoys.fillna('').to_dict('records')
 
-@router.get('/{buoy_id}')
+@router.get('/{buoy_id}') 
 async def get_buoy_by_id(buoy_id: str):
-    buoys = pd.read_csv(STATIONS_URL, delimiter = '|').iloc[1:,:]
-    buoys.columns = ['buoy_id', 'owner', 'ttype', 'hull', 'name', 'payload', 'location', 'timezone', 'forecast', 'note']
-    buoy = buoys[buoys['buoy_id'] == buoy_id].fillna('').to_dict('records')
-    if not buoy:
+    try:
+        buoy = Buoy(buoy_id)
+    except ValueError:
         raise HTTPException(status_code=404, detail="Buoy not found")
-    buoy = buoy[0]
-    buoy['lat'], buoy['lon'] = get_lat_lon(buoy['location'])
-    del buoy['location']
-    buoy['owner'] = get_owner(buoy['owner'])
-    return buoy
+    return buoy.metadata
 
 @router.get('/{buoy_id}/realtime')
 async def get_buoy_realtime_data_types(buoy_id: str):
@@ -45,6 +40,24 @@ async def get_buoy_realtime_data(buoy_id: str, dtype: str):
     except ValueError:
         raise HTTPException(status_code=404, detail="Buoy not found")
     data = buoy.get_realtime(dtype).reset_index()
+    return data.to_json(orient='records')
+
+@router.get('/{buoy_id}/historical')
+async def get_buoy_historical_data_types(buoy_id: str):
+    try:
+        buoy = Buoy(buoy_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Buoy not found")
+    return buoy.get_historical_dtypes()
+
+@router.get('/{buoy_id}/historical/{year}/{dtype}')
+async def get_buoy_historical_data_types(buoy_id: str, year: int, dtype: str=""):
+    try:
+        buoy = Buoy(buoy_id)
+        print("buoy located")
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Buoy not found")
+    data = buoy.get_historical(dtype).reset_index()
     return data.to_json(orient='records')
 
 

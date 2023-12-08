@@ -68,7 +68,7 @@ class Buoy:
 
     def _get_metadata(self):
         ''' Helper method to populate metadata field with relevant information. '''
-        stations = self.get_buoys()
+        stations = self.get_buoys().fillna('')
         # Check if buoy id is valid
         if self.buoy_id not in stations.index:
             raise ValueError("{} is not a valid buoy id. Use static method Buoy.get_buoys() to get dataframe of all buoys.".format(self.buoy_id))
@@ -77,7 +77,7 @@ class Buoy:
         buoy_info = stations.loc[self.buoy_id,:]
         metadata = {}
         metadata['buoy_id'] = self.buoy_id
-        metadata['owner'] = self._get_owner_name(buoy_info['owner'])
+        metadata['owner'] = { "id": buoy_info['owner'], "name": self._get_owner_name(buoy_info['owner']) }
         metadata['ttype'] = buoy_info['ttype']
         metadata['hull'] = buoy_info['hull']
         metadata['name'] = buoy_info['name']
@@ -85,20 +85,19 @@ class Buoy:
         metadata['forecast'] = buoy_info['forecast']  # More Forecasts: https://www.ndbc.noaa.gov/data/DAB_Forecasts/46087fc.html, https://www.ndbc.noaa.gov/data/Forecasts/
         metadata['note'] = buoy_info['note']
         # metadata['available historical'] = {"dtype":[years]}
+        metadata['latitude'], metadata['longitude'] = self._get_lat_lon(buoy_info['location'])
+        return metadata
 
-        # Latitude and Longitude parsing
-        lat_match = re.search(r'([0-9]{1,3}\.[0-9]{3}) ([NS])', buoy_info['location'])
+    def _get_lat_lon(self, location: str):
+        lat_match = re.search(r'([0-9]{1,3}\.[0-9]{3}) ([NS])', location)
         lat = lat_match.group(1)
         if lat_match.group(2) == 'S':
             lat = '-' + lat
-        metadata['latitude'] = lat
-        lng_match = re.search(r'([0-9]{1,3}\.[0-9]{3}) ([WE])', buoy_info['location'])
-        lng = lng_match.group(1)
-        if lng_match.group(2) == 'W':
-            lng = '-' + lng
-        metadata['longitude'] = lng
-
-        return metadata
+        lon_match = re.search(r'([0-9]{1,3}\.[0-9]{3}) ([WE])', location)
+        lon = lon_match.group(1)
+        if lon_match.group(2) == 'W':
+            lon = '-' + lon
+        return pd.Series([lat, lon])
 
     def _get_owner_name(self, owner_code):
         ''' Metadata helper function gets a buoy owner's full name based on buoy owner code. '''
@@ -163,7 +162,7 @@ class Buoy:
     
     def get_historical(self, dtype, year=None, month=None):
         '''
-        Get realtime data (last 45 days) for specified data type
+        Get historical data for specified data type
         Input :
             dtype : string representing data type to get data for.
             Up to one of the following (default is all available data):
@@ -172,6 +171,9 @@ class Buoy:
         Output :
             pandas dataframe with datetime64[ns, UTC] index.
         '''
+        if self.metadata['owner']['id'] == 'C':
+            print("Canadian buoy detected...")
+            return self.get_canadian_historical(dtype)
         if dtype not in self.historical.DTYPES:
             print("Possible historical dtypes are: {}".format(list(self.historical.DTYPES)))
             return
@@ -189,6 +191,11 @@ class Buoy:
             df = self.historical.scrape_dtype(dtype)
             if df.empty: print("{} not available for buoy {}. Use method 'get_historical_dtypes()' to get available historical data types for this buoy.".format(dtype,self.buoy_id))
             else: return df
+    
+    def get_canadian_historical(self, dtype):
+        df = self.historical.scrape_canadian(dtype)
+        return df
+
 
     ### Saving / Loading methods
 

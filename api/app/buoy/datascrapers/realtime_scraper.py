@@ -16,19 +16,21 @@ from .buoy_data_scraper import BuoyDataScraper
 
 class RealtimeScraper(BuoyDataScraper):
 
-    DTYPES = {"stdmet":   {"url_code":"txt",       "name":"Standard Meteorological Data"},
-              "adcp":     {"url_code":"adcp",      "name":"Acoustic Doppler Current Profiler Data"},
-              "cwind":    {"url_code":"cwind",     "name":"Continuous Winds Data"},
-              "supl":     {"url_code":"supl",      "name":"Supplemental Measurements Data"},
-              "spec":     {"url_code":"spec",      "name":"Spectral Wave Summary Data"},
-              "data_spec":{"url_code":"data_spec", "name":"Raw Spectral Wave Data"},
-              "swdir":    {"url_code":"swdir",     "name":"Spectral Wave Data (alpha1)"},
-              "swdir2":   {"url_code":"swdir2",    "name":"Spectral Wave Data (alpha2)"},
-              "swr1":     {"url_code":"swr1",      "name":"Spectral Wave Data (r1)"},
-              "swr2":     {"url_code":"swr2",      "name":"Spectral Wave Data (r2)"},
-              "ocean":    {"url_code":"ocean",     "name":"Oceanographic"},
-              "srad":     {"url_code":"srad",      "name":"Solar Radiation"},
-              }
+    DTYPES = {
+        "stdmet":    {"url_code":"txt",       "name":"Standard Meteorological Data"},
+        "adcp":      {"url_code":"adcp",      "name":"Acoustic Doppler Current Profiler Data"},
+        "cwind":     {"url_code":"cwind",     "name":"Continuous Winds Data"},
+        "supl":      {"url_code":"supl",      "name":"Supplemental Measurements Data"},
+        "spec":      {"url_code":"spec",      "name":"Spectral Wave Summary Data"},
+        "data_spec": {"url_code":"data_spec", "name":"Raw Spectral Wave Data"},
+        "swdir":     {"url_code":"swdir",     "name":"Spectral Wave Data (alpha1)"},
+        "swdir2":    {"url_code":"swdir2",    "name":"Spectral Wave Data (alpha2)"},
+        "swr1":      {"url_code":"swr1",      "name":"Spectral Wave Data (r1)"},
+        "swr2":      {"url_code":"swr2",      "name":"Spectral Wave Data (r2)"},
+        "ocean":     {"url_code":"ocean",     "name":"Oceanographic"},
+        "srad":      {"url_code":"srad",      "name":"Solar Radiation"},
+    }
+    
     BASE_URL = "https://www.ndbc.noaa.gov/data/realtime2/{}.{}"
 
     def __init__(self, buoy_id, data_dir="buoydata/"):

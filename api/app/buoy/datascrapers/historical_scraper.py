@@ -15,37 +15,72 @@ from .buoy_data_scraper import BuoyDataScraper
 
 class HistoricalScraper(BuoyDataScraper):
 
-    DTYPES = {"stdmet":{"url_code":"h", "name":"Standard metorological"},
-              "swden": {"url_code":"w", "name":"Spectral wave density"},
-              "swdir": {"url_code":"d", "name":"Spectral wave (alpha1) direction"},
-              "swdir2":{"url_code":"i", "name":"Spectral wave (alpha2) direction"},
-              "swr1":  {"url_code":"j", "name":"Spectral wave (r1) direction"},
-              "swr2":  {"url_code":"k", "name":"Spectral wave (r2) direction"},
-              "adcp":  {"url_code":"a", "name":"Ocean current"},
-              "cwind": {"url_code":"c", "name":"Continuous winds"},
-              "ocean": {"url_code":"o", "name":"Oceanographic"},
-              "dart":  {"url_code":"t", "name":"Water column height (Tsunami) (DART)"}
-              }
     BASE_URL_YEAR = "https://www.ndbc.noaa.gov/view_text_file.php?filename={}{}{}.txt.gz&dir=data/historical/{}/"
     BASE_URL_MONTH = "https://www.ndbc.noaa.gov/view_text_file.php?filename={}{}{}.txt.gz&dir=data/{}/{}/"
-    MONTHS = {1: {"name":"Jan", "url_code":1},
-              2: {"name":"Feb", "url_code":2},
-              3: {"name":"Mar", "url_code":3},
-              4: {"name":"Apr", "url_code":4},
-              5: {"name":"May", "url_code":5},
-              6: {"name":"Jun", "url_code":6},
-              7: {"name":"Jul", "url_code":7},
-              8: {"name":"Aug", "url_code":8},
-              9: {"name":"Sep", "url_code":9},
-              10:{"name":"Oct", "url_code":'a'},
-              11:{"name":"Nov", "url_code":'b'},
-              12:{"name":"Dec", "url_code":'c'}
-              }
+    DTYPES = {
+        "stdmet":{"url_code":"h", "name":"Standard metorological"},
+        "swden": {"url_code":"w", "name":"Spectral wave density"},
+        "swdir": {"url_code":"d", "name":"Spectral wave (alpha1) direction"},
+        "swdir2":{"url_code":"i", "name":"Spectral wave (alpha2) direction"},
+        "swr1":  {"url_code":"j", "name":"Spectral wave (r1) direction"},
+        "swr2":  {"url_code":"k", "name":"Spectral wave (r2) direction"},
+        "adcp":  {"url_code":"a", "name":"Ocean current"},
+        "cwind": {"url_code":"c", "name":"Continuous winds"},
+        "ocean": {"url_code":"o", "name":"Oceanographic"},
+        "dart":  {"url_code":"t", "name":"Water column height (Tsunami) (DART)"}
+    }
+    MONTHS = {
+        1: {"name":"Jan", "url_code":1},
+        2: {"name":"Feb", "url_code":2},
+        3: {"name":"Mar", "url_code":3},
+        4: {"name":"Apr", "url_code":4},
+        5: {"name":"May", "url_code":5},
+        6: {"name":"Jun", "url_code":6},
+        7: {"name":"Jul", "url_code":7},
+        8: {"name":"Aug", "url_code":8},
+        9: {"name":"Sep", "url_code":9},
+        10:{"name":"Oct", "url_code":'a'},
+        11:{"name":"Nov", "url_code":'b'},
+        12:{"name":"Dec", "url_code":'c'}
+    }
     MIN_YEAR = 2007
 
+    CANADIAN_URL = "https://www.meds-sdmm.dfo-mpo.gc.ca/alphapro/wave/waveshare/csvData/c{}_csv.zip"
+    CANADIAN_URL_YEAR = "https://www.meds-sdmm.dfo-mpo.gc.ca/alphapro/wave/waveshare/fbyears/C{}/c{}_{}.zip"
+
+    CADADIAN_DTYPES = {
+        'VCAR': {'desc': 'Characteristic significant wave height (calculated by MEDS) (m)'},
+        'VWH$': {'desc': 'Characteristic significant wave height (reported by the buoy) (m)'},
+        'VCMX': {'desc': 'Maximum zero crossing wave height (reported by the buoy) (m)'},
+        'VTPK': {'desc': 'Wave spectrum peak period (calculated by MEDS) (s)'},
+        'VTP$': {'desc': 'Wave spectrum peak period (reported by the buoy) (s)'},
+        'WDIR': {'desc': 'Direction from which the wind is blowing (° True)'},
+        'WSPD': {'desc': 'Horizontal wind speed (m/s)'},
+        'WSS$': {'desc': 'Horizontal scalar wind speed (m/s)'},
+        'GSPD': {'desc': 'Gust wind speed (m/s)'},
+        'ATMS': {'desc': 'Atmospheric pressure at sea level (mbar)'},
+        'DRYT': {'desc': 'Dry bulb temperature (°C)'},
+        'SSTP': {'desc': 'Sea surface temperature (°C)'},
+        'SLEV': {'desc': 'Observed sea level'},
+        'SST1': {'desc': 'Average sea temperature from the non-synoptic part of WRIPS buoy data (°C)'},
+        'HAT$': {'desc': 'Water temperature from high accuracy temperature sensor (°C)'}
+    }
+
     def __init__(self, buoy_id, data_dir="buoydata/"):
-            super().__init__(buoy_id)
-            self.data_dir = "{}{}/historical/".format(data_dir, buoy_id)
+        super().__init__(buoy_id)
+        self.data_dir = "{}{}/historical/".format(data_dir, buoy_id)
+
+    def scrape_canadian(self, dtype):
+        url = self.CANADIAN_URL.format(self.buoy_id)
+        df = pd.read_csv(url, na_values=['NaN'], parse_dates=['DATE']) # .tz_localize('UTC')
+        print('{} records loaded'.format(len(df)))
+        print(df.head(5))
+        df.dropna(axis=1, how='any', inplace=True)
+        df.drop(['STN_ID', 'LATITUDE', 'LONGITUDE'], axis=1, inplace=True)
+        # df['DATE'] = pd.to_datetime(df['DATE'])
+        return df.head(10)
+        # return df[df['DATE'].dt.year == 2020]
+
 
     def scrape_dtypes(self, dtypes=None):
         '''
@@ -292,6 +327,12 @@ class HistoricalScraper(BuoyDataScraper):
             if self._url_valid(self._make_url_month(dtype, month)):
                 available_months.append(month)
         return available_months
+
+    def _make_canadian_url(self, year=None):
+        if year:
+            return self.CANADIAN_URL_YEAR.format(self.buoy_id, self.buoy_id, year)
+        else:
+            return self.CANADIAN_URL.format(self.buoy_id)
 
     def _make_url_year(self, dtype, year):
         '''Makes a url for a given data type and year.'''
